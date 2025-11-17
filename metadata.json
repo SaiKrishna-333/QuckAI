@@ -1,0 +1,8 @@
+{
+  "name": "QuickAI: Multi-Modal Content Creation",
+  "description": "A unified ML-powered platform to generate text, images, and audio content using Google's Gemini AI. This application provides a seamless and intuitive interface for all your creative needs.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
