@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { generateVideo } from '../services/geminiService';
 import Spinner from '../components/Spinner';
@@ -82,7 +83,7 @@ const VideoGeneration: React.FC<VideoGenerationProps> = ({ project, onUpdateProj
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
              if (errorMessage.includes("Requested entity was not found")) {
-                setError("API key is invalid. Please select a valid key.");
+                setError("The project for this API key does not have access to the Veo model. Please select a different key or ensure billing is enabled for the project.");
                 setApiKeySelected(false);
             } else {
                 setError(errorMessage);

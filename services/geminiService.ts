@@ -84,35 +84,39 @@ export const generateImage = async (prompt: string): Promise<string> => {
 export const generateSpeech = async (text: string, mode: 'single' | 'multi'): Promise<string> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-    let speechConfig: any = {
-      voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-    };
+    let speechConfig: any;
 
     if (mode === 'multi') {
-      const speakerLines = text.split('\n').map(line => line.trim()).filter(line => line.includes(':'));
-      const speakerMap = new Map<string, string>();
+      // Find unique speaker names from lines formatted as "Speaker: text"
+      const speakerNames = [
+        ...new Set(
+          text
+            .split('\n')
+            .map(line => line.match(/^([^:]+):/)) // Match lines starting with "Speaker:"
+            .filter(Boolean) // Filter out lines that don't match
+            .map(match => match![1].trim()) // Extract the speaker name
+        ),
+      ];
+      
+      if (speakerNames.length !== 2) {
+        throw new Error(
+          "Multi-speaker generation requires exactly two speakers to be defined. Please format your text with two distinct names, e.g., 'Joe: ...' and 'Jane: ...'"
+        );
+      }
+
       const availableVoices = ['Kore', 'Puck'];
+      const speakerVoiceConfigs = speakerNames.map((speaker, index) => ({
+        speaker: speaker,
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName: availableVoices[index] },
+        },
+      }));
       
-      const speakerVoiceConfigs = [];
-      for(const line of speakerLines) {
-        const parts = line.split(':');
-        const speaker = parts[0].trim();
-        if (speaker && !speakerMap.has(speaker) && speakerMap.size < 2) {
-            const voiceName = availableVoices[speakerMap.size];
-            speakerMap.set(speaker, voiceName);
-            speakerVoiceConfigs.push({
-                speaker: speaker,
-                voiceConfig: { prebuiltVoiceConfig: { voiceName } }
-            });
-        }
-      }
-      
-      if (speakerVoiceConfigs.length > 0) {
-        speechConfig = { multiSpeakerVoiceConfig: { speakerVoiceConfigs } };
-      } else {
-        // Fallback to single speaker if formatting is incorrect
-        console.warn("Multi-speaker format not detected or invalid. Falling back to single speaker.");
-      }
+      speechConfig = { multiSpeakerVoiceConfig: { speakerVoiceConfigs } };
+    } else {
+      speechConfig = {
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
+      };
     }
 
     const response = await ai.models.generateContent({
@@ -132,6 +136,9 @@ export const generateSpeech = async (text: string, mode: 'single' | 'multi'): Pr
     throw new Error("No audio data was generated.");
   } catch (error) {
     console.error("Error generating speech:", error);
+    if (error instanceof Error && error.message.includes("Multi-speaker generation requires")) {
+        throw error; // Re-throw our custom validation error
+    }
     throw new Error("Failed to generate speech. This model may not be available in your region.");
   }
 };
